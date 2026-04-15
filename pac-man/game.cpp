@@ -1,12 +1,13 @@
 #include "game.h"
-#include "map/map.h"
-#include "objects/object.h"
+
 
 #include <SFML/Window.hpp>
 
 #include <iostream>
 
-bool Game::init()
+int map = 0;
+
+bool game::init()
 {
     // Load map information from JSON into object list
     if (!map.loadFromFile("data/map.json"))
@@ -30,7 +31,7 @@ bool Game::init()
     return true;
 }
 
-void Game::run()
+void game::run()
 {
     float deltaTime = 0;
     clock.restart();
@@ -44,7 +45,7 @@ void Game::run()
 }
 
 // Process and draws one frame of the game
-bool Game::gameTick(float deltaTime)
+bool game::gameTick(float deltaTime)
 {
     // Process events from the OS
     while (const std::optional event = window.pollEvent())

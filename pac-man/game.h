@@ -3,7 +3,6 @@
 
 #include <iostream>
 
-#include "map/map.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Clock.hpp>
@@ -16,8 +15,8 @@ class Object;
 class game
 {
 public:
-    bool innit();
-    void run()
+    bool init();
+    void run();
 
 
 protected:
@@ -28,10 +27,6 @@ protected:
 
     sf::RenderWindow window;
 
-    Map map;
-
-}
-
-
+};
 
 #endif //IKT103_EKSAMEN_OPPGAVE_GAME_H

@@ -3,7 +3,9 @@ project(pac_man)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(pac_man main.cpp)
+add_executable(pac_man main.cpp
+        game.cpp
+        game.h)
 
 
 target_include_directories(pac_man PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

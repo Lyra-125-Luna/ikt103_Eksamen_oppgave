@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 4.0)
-project(pac_Man)
+project(pac_man)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(pac_Man main.cpp)
+add_executable(pac_man main.cpp)
+
+
+target_include_directories(pac_man PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
+target_link_libraries(pac_man PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)

@@ -1,6 +1,17 @@
 #include <iostream>
 
+#include "game.h"
+
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+
+    game game;
+
+    std::cout << "compiled" << std::endl;
+
+
+
+    std::cout << "prsooses termened" << std::endl;
+
     return 0;
 }

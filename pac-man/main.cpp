@@ -10,6 +10,9 @@ int main() {
     std::cout << "compiled" << std::endl;
 
 
+    game.init();
+    game.run();
+
 
     std::cout << "prsooses termened" << std::endl;
 

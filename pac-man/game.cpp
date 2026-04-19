@@ -9,15 +9,9 @@ int map = 0;
 
 bool game::init()
 {
-    // Load map information from JSON into object list
-    if (!map.loadFromFile("data/map.json"))
-    {
-        std::cout << "Failed to load map data." << std::endl;
-        return false;
-    }
 
     // Standard SFML setup
-    window.create(sf::VideoMode({640, 480}), "Mario?");
+    window.create(sf::VideoMode({1000, 840}), "Pac-Man");
 
     // Double the size of the screen
     sf::View view = window.getDefaultView();
@@ -58,16 +52,6 @@ bool game::gameTick(float deltaTime)
 
         if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>())
         {
-                // Reload map on F5
-                if (keyPressed->code == sf::Keyboard::Key::F5)
-                {
-                    if (!map.loadFromFile("data/map.json"))
-                    {
-                        std::cout << "Failed to reload map data." << std::endl;
-                        return false;
-                    }
-                }
-
                 // Exit program on escape
                 if (keyPressed->code == sf::Keyboard::Key::Escape)
                 {
@@ -79,13 +63,6 @@ bool game::gameTick(float deltaTime)
     }
 
     window.clear(sf::Color::Black);
-
-    // Process and render each object
-    for (auto &object: map.GetObjects())
-    {
-        object->process(deltaTime);
-        object->draw(window);
-    }
 
     window.display();
 

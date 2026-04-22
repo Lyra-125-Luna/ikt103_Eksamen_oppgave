@@ -1,17 +1,22 @@
-#include "game.h"
 
+// c++ libereys and SFML
+#include <iostream>
 
 #include <SFML/Window.hpp>
 
-#include <iostream>
+// exterel
 
-int map = 0;
+#include "game.h"
+#include "object/pac-man.h"
+
+#define x_acess 1000
+#define y_acess 840
 
 bool game::init()
 {
 
     // Standard SFML setup
-    window.create(sf::VideoMode({1000, 840}), "Pac-Man");
+    window.create(sf::VideoMode({x_acess, y_acess}), "Pac-Man");
 
     // Double the size of the screen
     sf::View view = window.getDefaultView();
@@ -21,6 +26,16 @@ bool game::init()
 
     window.setVerticalSyncEnabled(true);
     window.setFramerateLimit(60);
+
+    float  shapeWith = x_acess / 2.f;
+    float shapehigth = y_acess / 2.f;
+
+    float max_X = shapeWith;
+    float max_Y = shapehigth;
+
+
+    objects.push_back(std::make_unique<pac_man>(160.f, 120.f, max_Y, max_X));
+
 
     return true;
 }
@@ -41,6 +56,7 @@ void game::run()
 // Process and draws one frame of the game
 bool game::gameTick(float deltaTime)
 {
+
     // Process events from the OS
     while (const std::optional event = window.pollEvent())
     {
@@ -62,7 +78,18 @@ bool game::gameTick(float deltaTime)
         }
     }
 
+
+    for (auto& object : objects)
+    {
+        object->logic(deltaTime);
+    }
+
     window.clear(sf::Color::Black);
+
+    for (auto& object : objects)
+    {
+        object->draw(window);
+    }
 
     window.display();
 

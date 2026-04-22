@@ -2,6 +2,9 @@
 #ifndef PAC_MAN_OBJECT_H
 #define PAC_MAN_OBJECT_H
 
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+
 class Object
 {
 public:
@@ -17,7 +20,7 @@ public:
     int blue;
 
     // Common logic for moving objects
-    virtual void logic(float deltaTime, const sf::Event& event)
+    virtual void logic(float deltaTime)
     {
         x += xspeed * deltaTime;
         y += yspeed * deltaTime;

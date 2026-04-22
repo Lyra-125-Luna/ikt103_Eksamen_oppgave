@@ -2,10 +2,13 @@
 #define IKT103_EKSAMEN_OPPGAVE_GAME_H
 
 #include <iostream>
-
-
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Clock.hpp>
+#include <vector>
+#include <memory>
+
+#include "object/pac-man.h"
+
 
 #include <list>
 
@@ -26,6 +29,8 @@ protected:
     sf::Clock clock;
 
     sf::RenderWindow window;
+
+    std::vector<std::unique_ptr<Object>> objects;
 
 };
 

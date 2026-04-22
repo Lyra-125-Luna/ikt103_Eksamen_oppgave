@@ -12,48 +12,79 @@ class pac_man : public Object
 public:
 
   // x and y are passed on to the Object constructor
-  pac_man(float x, float y) : Object(x, y)
+  pac_man(float x, float y, float maxY, float maxX) : Object(x, y), max_Y(maxY), max_X(maxX)
   {
     srand(static_cast<unsigned>(time(0)));
     shape.setRadius(radius);
     shape.setFillColor(sf::Color::Yellow);
-    reset();
   }
 
-  void collishon_handler(const sf::FloatRect &paddleRect)
+  void collishon_handler(const sf::FloatRect &wall)
   {
-    sf::FloatRect ballRect = shape.getGlobalBounds();
-
-    if (ballRect.findIntersection(paddleRect).has_value())
+    if (y == 0)
     {
-      xspeed = -xspeed;
-
-      if (xspeed > 0)
-        x = paddleRect.position.x + paddleRect.size.x + 1.f;
-      else
-        x = paddleRect.position.x - shape.getRadius() * 2 - 1.f;
+      xspeed = 0;
+      yspeed = 0;
     }
 
+    if (y == max_Y)
+    {
+      yspeed = 0;
+    };
+
+    if (x >= max_X)
+    {
+      x == 0;
+    }
+    if (x <= -0.1f)
+    {
+      x == max_X;
+    }
+
+
   }
 
 
-  void logic(float deltaTime, const sf::Event& event) override
+
+  void logic(float deltaTime)
   {
+
     float diameter = radius * 2;
 
-
-    if (y <= 0)
+    //key pressed
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
     {
-      y = 0.f;
-      yspeed = std::abs(yspeed);
-    }
-    if (y + diameter >= 240.f)
-    {
-      y = 240.f - diameter;
-      yspeed = -std::abs(yspeed);
+      xspeed = 60;
+      yspeed = 0;
     }
 
-    Object::logic(deltaTime, event);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+    {
+      xspeed = -60;
+      yspeed = 0;
+    }
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+    {
+      yspeed = -60;
+      xspeed = 0;
+    }
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+    {
+      yspeed = 60;
+      xspeed = 0;
+    }
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+    {
+      yspeed = 0;
+      xspeed = 0;
+    }
+
+
+
+    Object::logic(deltaTime);
     shape.setPosition({x, y});
   }
 
@@ -67,52 +98,14 @@ public:
     return shape.getGlobalBounds();
   }
 
-  void reset()
-  {
-    x = 160.f;
-    y = 120.f;
-    justReset = true;
-
-    float speedX = 100.f + static_cast<float>(rand() % 100);
-    float speedY = 100.f + static_cast<float>(rand() % 100);
-
-
-    xspeed = goRight ? speedX : -speedX;
-    yspeed = (rand() % 2 == 0) ? speedY : -speedY;
-
-    goRight = !goRight;
-  }
-
-  bool hasJustReset() const
-  { return justReset; }
-  void clearResetFlag()
-  { justReset = false; }
-
-
-  float get_speed()
-  {
-
-    static std::mt19937 rng(std::random_device{}());  // seeded once
-    std::uniform_real_distribution<float> dist(100.f, 250.f);
-
-    float speed = dist(rng);
-
-    // Randomly flip direction so ball doesn't always go the same way
-    if (rng() % 2 == 0)
-      speed = -speed;
-
-    return speed;
-  }
-
-
 protected:
 
   sf::CircleShape shape;
 
   static constexpr float radius = 10.f;
 
-  bool goRight = false;
-  bool justReset = true;
+  float max_Y = 0.f;
+  float max_X = 0.f;
 
 
 };

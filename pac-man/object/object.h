@@ -36,6 +36,7 @@ public:
     float yspeed;
 
     float getX() const { return x; }
+
 };
 
 

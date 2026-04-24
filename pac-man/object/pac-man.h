@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <random>
+#include <iostream>
 
 
 #include "object/object.h"
@@ -49,28 +50,45 @@ public:
   void logic(float deltaTime)
   {
 
+    // check connection state
+    bool isConnected = sf::Joystick::isConnected(joystickId);
+
+
+    if (isConnected && !wasConnected)
+    {
+      std::cout << "Joystick connected\n";
+    }
+    else if (!isConnected && wasConnected)
+    {
+      std::cout << "Joystick disconnected\n";
+    }
+
+
+    wasConnected = isConnected;
+
+
     float diameter = radius * 2;
 
     //key pressed
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) && xspeed == 0)
     {
       xspeed = 60;
       yspeed = 0;
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && xspeed == 0)
     {
       xspeed = -60;
       yspeed = 0;
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) && yspeed == 0)
     {
       yspeed = -60;
       xspeed = 0;
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)&& yspeed == 0)
     {
       yspeed = 60;
       xspeed = 0;
@@ -81,6 +99,12 @@ public:
       yspeed = 0;
       xspeed = 0;
     }
+
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 0))
+    {
+      std::cout << "Button 0 pressed\n";
+    }
+
 
 
 
@@ -103,6 +127,10 @@ protected:
   sf::CircleShape shape;
 
   static constexpr float radius = 10.f;
+
+
+  unsigned int joystickId = 0;
+  bool wasConnected = false;
 
   float max_Y = 0.f;
   float max_X = 0.f;

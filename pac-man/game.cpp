@@ -33,6 +33,9 @@ bool game::init()
     float max_X = shapeWith;
     float max_Y = shapehigth;
 
+    // check connection state
+    unsigned int joystickId;
+
 
     objects.push_back(std::make_unique<pac_man>(160.f, 120.f, max_Y, max_X));
 

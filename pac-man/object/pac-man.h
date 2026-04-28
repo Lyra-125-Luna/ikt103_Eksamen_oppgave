@@ -50,21 +50,29 @@ public:
   void logic(float deltaTime)
   {
 
-    // check connection state
+
     bool isConnected = sf::Joystick::isConnected(joystickId);
 
+    isConnected = sf::Joystick::isConnected(joystickId);
+    wasConnected = false;
 
-    if (isConnected && !wasConnected)
+    if (startup)
     {
-      std::cout << "Joystick connected\n";
-    }
-    else if (!isConnected && wasConnected)
-    {
-      std::cout << "Joystick disconnected\n";
+      if (isConnected && !wasConnected) {
+
+        std::cout << "Joystick connected\n";
+      }
+      else if (!isConnected && wasConnected) {
+        std::cout << "Joystick disconnected\n";
+      }
+      startup = false;
+
     }
 
 
     wasConnected = isConnected;
+
+
 
 
     float diameter = radius * 2;
@@ -72,8 +80,8 @@ public:
     //key pressed
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) && xspeed == 0)
     {
-      xspeed = 60;
       yspeed = 0;
+      xspeed = 60;
     }
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && xspeed == 0)
@@ -100,11 +108,43 @@ public:
       xspeed = 0;
     }
 
-    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 0))
+    // controller
+
+      // down
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 0) && yspeed == 0)
     {
-      std::cout << "Button 0 pressed\n";
+      yspeed = 60;
+      xspeed = 0;
+
     }
 
+    // rigth
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 1) && xspeed == 0)
+    {
+      yspeed = 0;
+      xspeed = 60;
+    }
+
+    // up
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 2) && yspeed == 0)
+    {
+
+      yspeed = -60;
+      xspeed = 0;
+    }
+
+      // left
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 3) && xspeed == 0)
+    {
+      yspeed = 0;
+      xspeed = -60;
+    }
+
+    if (isConnected && sf::Joystick::isButtonPressed(joystickId, 4))
+    {
+      yspeed = 0;
+      xspeed = 0;
+    }
 
 
 
@@ -129,12 +169,13 @@ protected:
   static constexpr float radius = 10.f;
 
 
-  unsigned int joystickId = 0;
+ unsigned int joystickId = 0;
   bool wasConnected = false;
 
   float max_Y = 0.f;
   float max_X = 0.f;
 
+  bool startup = true;
 
 };
 

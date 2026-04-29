@@ -7,6 +7,7 @@
 // exterel
 
 #include "game.h"
+#include "object/enemy_gost_1.h"
 #include "object/pac-man.h"
 
 #define x_acess 1000
@@ -38,6 +39,8 @@ bool game::init()
 
 
     objects.push_back(std::make_unique<pac_man>(160.f, 120.f, max_Y, max_X));
+    objects.push_back(std::make_unique<gost_1>(160.f, 120.f, max_X, max_Y));
+
 
 
     return true;

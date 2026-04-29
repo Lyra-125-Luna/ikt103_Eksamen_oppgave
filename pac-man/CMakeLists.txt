@@ -9,7 +9,8 @@ add_executable(pac_man main.cpp
         map/map.cpp
         map/map.h
         object/object.h
-        object/pac-man.h)
+        object/pac-man.h
+        object/enemy_gost_1.h)
 
 
 target_include_directories(pac_man PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

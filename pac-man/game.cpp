@@ -10,11 +10,29 @@
 #include "object/enemy_gost_1.h"
 #include "object/pac-man.h"
 
+#include "map/map.h"
+#include "object/layer.h"
+
+Map gameMap;
+
 #define x_acess 1000
 #define y_acess 840
 
+
+#include <filesystem>
+
 bool game::init()
 {
+
+    std::cout << "Working dir: " << std::filesystem::current_path() << std::endl;
+    // lowiding map
+    if (!gameMap.loadFromFile("data/map/map.json"))
+    {
+        std::cout << "Failed to load map data." << std::endl;
+        return false;
+    }
+
+
 
     // Standard SFML setup
     window.create(sf::VideoMode({x_acess, y_acess}), "Pac-Man");
@@ -33,10 +51,6 @@ bool game::init()
 
     float max_X = shapeWith;
     float max_Y = shapehigth;
-
-    // check connection state
-    unsigned int joystickId;
-
 
     objects.push_back(std::make_unique<pac_man>(160.f, 120.f, max_Y, max_X));
     objects.push_back(std::make_unique<gost_1>(160.f, 120.f, max_X, max_Y));
@@ -92,6 +106,17 @@ bool game::gameTick(float deltaTime)
 
     window.clear(sf::Color::Black);
 
+    for (auto& object : objects)
+    {
+        object->draw(window);
+    }
+
+    for (auto& obj : gameMap.GetObjects())
+    {
+        obj->draw(window);
+    }
+
+    // Then draw game objects on top
     for (auto& object : objects)
     {
         object->draw(window);

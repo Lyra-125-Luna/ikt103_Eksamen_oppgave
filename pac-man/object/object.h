@@ -37,6 +37,9 @@ public:
 
     float getX() const { return x; }
 
+
+
+
 };
 
 

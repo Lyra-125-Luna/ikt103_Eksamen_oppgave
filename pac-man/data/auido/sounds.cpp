@@ -1,38 +1,52 @@
 
 #include "sounds.h"
 
+#include "game.h"
+
+game game;
+
+
 #include <iostream>
 #include <SFML/Audio.hpp>
+#include <vector>
 
-bool sounds::sounds_active()
+bool m = false;
+
+
+
+bool sounds_muscik::getBuffer()
 {
-    sf::SoundBuffer music("Pixel-Peeker-Polka-faster(chosic.com).mp3");
-    if (!music.loadFromFile("Pixel-Peeker-Polka-faster(chosic.com).mp3"))
+    sf::SoundBuffer bufferMusic;
+    if (!bufferMusic.loadFromFile("data/auido/Pixel-Peeker-Polka-faster(chosic.com).mp3"))
     {
-        std::cerr << "Could not load music." << std::endl;
-        return false;
+        std::cout << "No musick error" << std::endl;
     }
 
-    sf::SoundBuffer power("power_up.wav");
-    if (!power.loadFromFile("Power-up.wav"))
+    sf::SoundBuffer bufferPowerUp;
+    if (!bufferPowerUp.loadFromFile("data/auido/power_up.wav"))
     {
-        std::cerr << "Could not load power." << std::endl;
-        return false;
+        std::cout << "No powerUp error" << std::endl;
     }
 
-    sf::SoundBuffer revive("revive.wav");
-    if (!revive.loadFromFile("revive.wav"))
+    sf::SoundBuffer pickUp_S;
+    if (!pickUp_S.loadFromFile("data/auido/pickUp.wav"))
     {
-        std::cerr << "Could not load revive." << std::endl;
-        return false;
+        std::cout << "No pickUp error" << std::endl;
     }
+
+
+
+    PixelPeeker.setBuffer(bufferMusic);
+    powerUp.setBuffer(bufferPowerUp);
+    pickUp.setBuffer(pickUp_S);
+
+    aoudio.push_back(PixelPeeker);
+    aoudio.push_back(powerUp);
+    aoudio.push_back(PixelPeeker);
+
+    m = true;
+    bool loadSounds(m);
 
 
     return true;
-}
-
-bool sounds::sounds_deactive()
-{
-    return false;
-
 }

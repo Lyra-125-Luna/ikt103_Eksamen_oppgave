@@ -5,19 +5,36 @@
 #ifndef PAC_MAN_SOUNDS_H
 #define PAC_MAN_SOUNDS_H
 
+#include <SFML/Audio.hpp>
 
-class sounds
+
+class sounds_muscik
 {
-    public:
 
-    bool sounds_active();
-    bool sounds_deactive();
+public:
 
-    private:
+    sounds_muscik() = default;
+    bool getBuffer(void);
+    void play();
 
-    bool music;
-    bool effects;
+
+private:
+
+    sf::Music m_music;
+
+    bool music = true;
+    bool effects = true;
+
+    std::vector <sf::Sound> aoudio;
+
+    sf::Sound PixelPeeker;
+    sf::Sound powerUp;
+    sf::Sound pickUp;
+
 };
+
+
+
 
 
 #endif //PAC_MAN_SOUNDS_H

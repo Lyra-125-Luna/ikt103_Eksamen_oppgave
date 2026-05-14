@@ -9,7 +9,6 @@
 #include "map.h"
 #include "object/object.h"
 #include "object/pac-man.h"
-#include "object/Ghosts.h"
 #include "object/layer.h"
 
 // Public functions
@@ -162,26 +161,15 @@ void Map::loadTileset(rapidjson::Value &tileset)
 
 bool Map::isWall(int x, int y)
 {
-    for (auto& obj : objects)
+    for (auto &obj : objects)
     {
         auto tileLayer = dynamic_cast<Layer*>(obj);
-
-        if (tileLayer && (tileLayer->name == "map_B" || tileLayer->name == "map_F"))
+        if (tileLayer && tileLayer->name == "map_B")
         {
-            if (x < 0 || y < 0 || x >= tileLayer->width || y >= tileLayer->height)
-            {
-                return true;
-            }
-
             int index = y * tileLayer->width + x;
-
-            if (tileLayer->tilemap[index] == 1)
-            {
-                return true;
-            }
+            return tileLayer->tilemap[index] == 1;
         }
     }
-
     return false;
 }
 

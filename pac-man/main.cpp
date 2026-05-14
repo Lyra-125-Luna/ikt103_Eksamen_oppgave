@@ -2,19 +2,21 @@
 
 #include "game.h"
 
-
-int main() {
-
+int main()
+{
     game game;
 
     std::cout << "compiled" << std::endl;
 
+    if (!game.init())
+    {
+        std::cout << "initialization failed" << std::endl;
+        return 1;
+    }
 
-    game.init();
     game.run();
 
-
-    std::cout << "prsooses termened" << std::endl;
+    std::cout << "process terminated" << std::endl;
 
     return 0;
 }

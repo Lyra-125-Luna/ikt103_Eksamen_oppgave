@@ -2,11 +2,16 @@
 #define PAC_MAN_GHOSTS_H
 
 #include <SFML/Graphics.hpp>
-#include <vector>
+
+#include <algorithm>
 #include <cmath>
-#include <limits>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
+#include <limits>
+#include <queue>
+#include <string>
+#include <vector>
 
 #include "object/object.h"
 #include "map/map.h"
@@ -21,23 +26,52 @@ enum class GhostAI
   Patrol
 };
 
+enum class GhostState
+{
+  Normal,
+  Scared,
+  Dead
+};
+
+enum class GhostSpriteType
+{
+  Red,
+  Pink,
+  Blue,
+  Green,
+  Orange
+};
+
 class ghost : public Object
 {
 public:
-  ghost(float x, float y, Map& map, pac_man& pacman, sf::Color color, float speed, GhostAI aiType)
-      : Object(x, y), map(map), pacman(pacman), speed(speed), aiType(aiType)
+  ghost(float x, float y, Map& map, pac_man& pacman, GhostSpriteType spriteType, float speed, GhostAI aiType)
+      : Object(x, y),
+        bodySprite(bodyTexture),
+        eyeSprite(eyeRightTexture),
+        map(map),
+        pacman(pacman),
+        speed(speed),
+        normalSpeed(speed),
+        aiType(aiType),
+        spriteType(spriteType)
   {
     srand(static_cast<unsigned>(time(0)));
 
-    shape.setRadius(radius);
-    shape.setFillColor(color);
+    ghostHouseTile = findGhostHouseTile();
+
+    loadSprites();
 
     snapToTileCenter();
-    shape.setPosition({this->x, this->y});
+
+    bodySprite.setPosition(getGhostCenter());
+    eyeSprite.setPosition(getGhostCenter());
   }
 
   void logic(float deltaTime) override
   {
+    updateState(deltaTime);
+
     if (!isMoving)
     {
       chooseNextTile();
@@ -45,29 +79,100 @@ public:
 
     moveToTargetTile(deltaTime);
 
-    shape.setPosition({x, y});
+    if (state == GhostState::Dead && hasReachedGhostHouse())
+    {
+      revive();
+    }
+
+    updateSprites();
   }
 
   void draw(sf::RenderWindow& window) override
   {
-    window.draw(shape);
+    window.draw(bodySprite);
+    window.draw(eyeSprite);
   }
 
   sf::FloatRect getBounds() const
   {
-    return shape.getGlobalBounds();
+    return bodySprite.getGlobalBounds();
+  }
+
+  void makeScared(float duration)
+  {
+    if (state == GhostState::Dead)
+    {
+      return;
+    }
+
+    state = GhostState::Scared;
+    scaredTimer = duration;
+    speed = normalSpeed * 0.65f;
+
+    bodySprite.setTexture(scaredTexture, true);
+    eyeSprite.setTexture(eyeScaredTexture, true);
+
+    forceChooseNewDirection();
+  }
+
+  void makeDead()
+  {
+    if (state == GhostState::Dead)
+    {
+      return;
+    }
+
+    state = GhostState::Dead;
+    scaredTimer = 0.f;
+    speed = normalSpeed * 1.6f;
+
+    bodySprite.setTexture(deadTexture, true);
+    updateEyeTexture();
+
+    forceChooseNewDirection();
+  }
+
+  bool isScared() const
+  {
+    return state == GhostState::Scared;
+  }
+
+  bool isDead() const
+  {
+    return state == GhostState::Dead;
+  }
+
+  bool isNormal() const
+  {
+    return state == GhostState::Normal;
   }
 
 protected:
-  sf::CircleShape shape;
-
   static constexpr float radius = 10.f;
   static constexpr float tileSize = 25.f;
+
+  sf::Vector2i ghostHouseTile{9, 10};
+
+  sf::Texture bodyTexture;
+  sf::Texture scaredTexture;
+  sf::Texture deadTexture;
+
+  sf::Texture eyeRightTexture;
+  sf::Texture eyeLeftTexture;
+  sf::Texture eyeUpTexture;
+  sf::Texture eyeDownTexture;
+  sf::Texture eyeScaredTexture;
+  sf::Texture eyeWaitingTexture;
+
+  sf::Sprite bodySprite;
+  sf::Sprite eyeSprite;
 
   Map& map;
   pac_man& pacman;
 
   GhostAI aiType = GhostAI::DirectChase;
+  GhostState state = GhostState::Normal;
+  GhostSpriteType spriteType = GhostSpriteType::Red;
 
   sf::Vector2i direction{0, 0};
   sf::Vector2i previousTile{-1, -1};
@@ -79,6 +184,265 @@ protected:
   sf::Vector2i randomTarget{-1, -1};
 
   float speed = 50.f;
+  float normalSpeed = 50.f;
+
+  float scaredTimer = 0.f;
+
+  void forceChooseNewDirection()
+  {
+    isMoving = false;
+    previousTile = {-1, -1};
+  }
+
+  sf::Vector2i findGhostHouseTile()
+  {
+    sf::Vector2i mapCenter{map.getWidth() / 2, map.getHeight() / 2};
+    sf::Vector2i bestTile = mapCenter;
+    int bestDistance = std::numeric_limits<int>::max();
+    bool foundGhostHouseFloor = false;
+
+    for (int y = 0; y < map.getHeight(); y++)
+    {
+      for (int x = 0; x < map.getWidth(); x++)
+      {
+        if (map.getTileAt(x, y) != 3)
+        {
+          continue;
+        }
+
+        int dx = mapCenter.x - x;
+        int dy = mapCenter.y - y;
+        int distance = dx * dx + dy * dy;
+
+        if (distance < bestDistance)
+        {
+          bestDistance = distance;
+          bestTile = {x, y};
+          foundGhostHouseFloor = true;
+        }
+      }
+    }
+
+    if (foundGhostHouseFloor)
+    {
+      return bestTile;
+    }
+
+    bestDistance = std::numeric_limits<int>::max();
+
+    for (int y = 0; y < map.getHeight(); y++)
+    {
+      for (int x = 0; x < map.getWidth(); x++)
+      {
+        if (map.getTileAt(x, y) != 2)
+        {
+          continue;
+        }
+
+        int dx = mapCenter.x - x;
+        int dy = mapCenter.y - y;
+        int distance = dx * dx + dy * dy;
+
+        if (distance < bestDistance)
+        {
+          bestDistance = distance;
+          bestTile = {x, y};
+        }
+      }
+    }
+
+    if (bestDistance != std::numeric_limits<int>::max())
+    {
+      return bestTile;
+    }
+
+    return clampToNearestOpenTile(mapCenter);
+  }
+
+  bool hasReachedGhostHouse()
+  {
+    sf::Vector2i currentTile = getCurrentTile();
+
+    if (currentTile == ghostHouseTile)
+    {
+      return true;
+    }
+
+    return map.getTileAt(currentTile.x, currentTile.y) == 3;
+  }
+
+  void loadSprites()
+  {
+    std::string bodyPath = getBodyTexturePath();
+
+    if (!bodyTexture.loadFromFile(bodyPath))
+    {
+      std::cout << "Failed to load ghost body: " << bodyPath << std::endl;
+    }
+
+    if (!scaredTexture.loadFromFile("data/assets/ghosts/ghostscared.png"))
+    {
+      std::cout << "Failed to load ghostscared.png\n";
+    }
+
+    if (!deadTexture.loadFromFile("data/assets/ghosts/ghostdead.png"))
+    {
+      std::cout << "Failed to load ghostdead.png\n";
+    }
+
+    if (!eyeRightTexture.loadFromFile("data/assets/ghosts/eyeright.png"))
+    {
+      std::cout << "Failed to load eyeright.png\n";
+    }
+
+    if (!eyeLeftTexture.loadFromFile("data/assets/ghosts/eyeleft.png"))
+    {
+      std::cout << "Failed to load eyeleft.png\n";
+    }
+
+    if (!eyeUpTexture.loadFromFile("data/assets/ghosts/eyeup.png"))
+    {
+      std::cout << "Failed to load eyeup.png\n";
+    }
+
+    if (!eyeDownTexture.loadFromFile("data/assets/ghosts/eyedown.png"))
+    {
+      std::cout << "Failed to load eyedown.png\n";
+    }
+
+    if (!eyeScaredTexture.loadFromFile("data/assets/ghosts/eyescared.png"))
+    {
+      std::cout << "Failed to load eyescared.png\n";
+    }
+
+    if (!eyeWaitingTexture.loadFromFile("data/assets/ghosts/eyewaiting.png"))
+    {
+      std::cout << "Failed to load eyewaiting.png\n";
+    }
+
+    bodySprite.setTexture(bodyTexture, true);
+    eyeSprite.setTexture(eyeRightTexture, true);
+
+    setupSpriteSize(bodySprite, bodyTexture);
+    setupSpriteSize(eyeSprite, eyeRightTexture);
+  }
+
+  std::string getBodyTexturePath() const
+  {
+    switch (spriteType)
+    {
+      case GhostSpriteType::Red:
+        return "data/assets/ghosts/ghostred.png";
+
+      case GhostSpriteType::Pink:
+        return "data/assets/ghosts/ghostpink.png";
+
+      case GhostSpriteType::Blue:
+        return "data/assets/ghosts/ghostblue.png";
+
+      case GhostSpriteType::Green:
+        return "data/assets/ghosts/ghostgreen.png";
+
+      case GhostSpriteType::Orange:
+        return "data/assets/ghosts/ghostorange.png";
+    }
+
+    return "data/assets/ghosts/ghostred.png";
+  }
+
+  void setupSpriteSize(sf::Sprite& sprite, const sf::Texture& texture)
+  {
+    float diameter = radius * 2.f;
+    sf::Vector2u size = texture.getSize();
+
+    if (size.x == 0 || size.y == 0)
+    {
+      return;
+    }
+
+    sprite.setOrigin({
+        static_cast<float>(size.x) / 2.f,
+        static_cast<float>(size.y) / 2.f
+    });
+
+    sprite.setScale({
+        diameter / static_cast<float>(size.x),
+        diameter / static_cast<float>(size.y)
+    });
+  }
+
+  void updateSprites()
+  {
+    sf::Vector2f center = getGhostCenter();
+
+    bodySprite.setPosition(center);
+    eyeSprite.setPosition(center);
+
+    updateEyeTexture();
+  }
+
+  void updateEyeTexture()
+  {
+    if (state == GhostState::Scared)
+    {
+      eyeSprite.setTexture(eyeScaredTexture, true);
+      setupSpriteSize(eyeSprite, eyeScaredTexture);
+      return;
+    }
+
+    if (direction == sf::Vector2i{1, 0})
+    {
+      eyeSprite.setTexture(eyeRightTexture, true);
+      setupSpriteSize(eyeSprite, eyeRightTexture);
+    }
+    else if (direction == sf::Vector2i{-1, 0})
+    {
+      eyeSprite.setTexture(eyeLeftTexture, true);
+      setupSpriteSize(eyeSprite, eyeLeftTexture);
+    }
+    else if (direction == sf::Vector2i{0, -1})
+    {
+      eyeSprite.setTexture(eyeUpTexture, true);
+      setupSpriteSize(eyeSprite, eyeUpTexture);
+    }
+    else if (direction == sf::Vector2i{0, 1})
+    {
+      eyeSprite.setTexture(eyeDownTexture, true);
+      setupSpriteSize(eyeSprite, eyeDownTexture);
+    }
+    else
+    {
+      eyeSprite.setTexture(eyeWaitingTexture, true);
+      setupSpriteSize(eyeSprite, eyeWaitingTexture);
+    }
+  }
+
+  void updateState(float deltaTime)
+  {
+    if (state != GhostState::Scared)
+    {
+      return;
+    }
+
+    scaredTimer -= deltaTime;
+
+    if (scaredTimer <= 0.f)
+    {
+      revive();
+    }
+  }
+
+  void revive()
+  {
+    state = GhostState::Normal;
+    scaredTimer = 0.f;
+    speed = normalSpeed;
+
+    bodySprite.setTexture(bodyTexture, true);
+    updateEyeTexture();
+
+    forceChooseNewDirection();
+  }
 
   void chooseNextTile()
   {
@@ -94,45 +458,28 @@ protected:
       return;
     }
 
-    sf::Vector2i reverseDirection = {-direction.x, -direction.y};
-
-    bool canContinueForward = false;
-
-    for (sf::Vector2i dir : availableDirections)
+    if (state == GhostState::Dead)
     {
-      if (dir == direction)
-      {
-        canContinueForward = true;
-        break;
-      }
+      direction = chooseBfsDirection(currentTile, ghostHouseTile, availableDirections, true);
     }
-
-    int nonReverseOptions = 0;
-
-    for (sf::Vector2i dir : availableDirections)
+    else if (state == GhostState::Scared)
     {
-      if (dir != reverseDirection)
-      {
-        nonReverseOptions++;
-      }
-    }
-
-    bool isIntersection = nonReverseOptions >= 2;
-    bool isDeadEnd = nonReverseOptions == 0;
-
-    if (canContinueForward && !isIntersection && !isDeadEnd)
-    {
-      // Corridor: keep current direction.
+      direction = chooseScaredDirection(currentTile, availableDirections);
     }
     else
     {
-      direction = chooseDirection(currentTile, availableDirections);
+      bool shouldDecide = shouldPickNewDirection(availableDirections);
+
+      if (shouldDecide)
+      {
+        sf::Vector2i targetTile = chooseTargetTile(currentTile);
+        direction = chooseBfsDirection(currentTile, targetTile, availableDirections, false);
+      }
     }
 
     if (direction == sf::Vector2i{0, 0})
     {
-      isMoving = false;
-      return;
+      direction = availableDirections.front();
     }
 
     sf::Vector2i nextTile = currentTile + direction;
@@ -145,9 +492,39 @@ protected:
     }
 
     previousTile = currentTile;
-
     targetCenter = getTileCenter(nextTile.x, nextTile.y);
     isMoving = true;
+  }
+
+  bool shouldPickNewDirection(const std::vector<sf::Vector2i>& availableDirections) const
+  {
+    if (direction == sf::Vector2i{0, 0})
+    {
+      return true;
+    }
+
+    sf::Vector2i reverseDirection = {-direction.x, -direction.y};
+
+    bool canContinueForward = false;
+    int nonReverseOptions = 0;
+
+    for (sf::Vector2i dir : availableDirections)
+    {
+      if (dir == direction)
+      {
+        canContinueForward = true;
+      }
+
+      if (dir != reverseDirection)
+      {
+        nonReverseOptions++;
+      }
+    }
+
+    bool isIntersection = nonReverseOptions >= 2;
+    bool isDeadEnd = nonReverseOptions == 0;
+
+    return !canContinueForward || isIntersection || isDeadEnd;
   }
 
   std::vector<sf::Vector2i> getAvailableDirections(sf::Vector2i currentTile)
@@ -174,31 +551,128 @@ protected:
     return available;
   }
 
-  sf::Vector2i chooseDirection(
+  sf::Vector2i chooseBfsDirection(
       sf::Vector2i currentTile,
-      const std::vector<sf::Vector2i>& availableDirections)
+      sf::Vector2i targetTile,
+      const std::vector<sf::Vector2i>& availableDirections,
+      bool allowReverse
+  )
   {
-    sf::Vector2i targetTile = chooseTargetTile(currentTile);
-    sf::Vector2i reverseDirection = {-direction.x, -direction.y};
+    int width = map.getWidth();
+    int height = map.getHeight();
 
+    if (width <= 0 || height <= 0)
+    {
+      return fallbackDirection(currentTile, targetTile, availableDirections, allowReverse);
+    }
+
+    if (targetTile.x < 0 || targetTile.y < 0 || targetTile.x >= width || targetTile.y >= height || map.isWall(targetTile.x, targetTile.y))
+    {
+      targetTile = clampToNearestOpenTile(targetTile);
+    }
+
+    std::vector<int> visited(width * height, 0);
+    std::vector<sf::Vector2i> parent(width * height, {-1, -1});
+
+    auto indexOf = [width](sf::Vector2i tile)
+    {
+      return tile.y * width + tile.x;
+    };
+
+    std::queue<sf::Vector2i> queue;
+    queue.push(currentTile);
+    visited[indexOf(currentTile)] = 1;
+
+    std::vector<sf::Vector2i> directions = {
+        {1, 0},
+        {-1, 0},
+        {0, 1},
+        {0, -1}
+    };
+
+    while (!queue.empty())
+    {
+      sf::Vector2i tile = queue.front();
+      queue.pop();
+
+      if (tile == targetTile)
+      {
+        break;
+      }
+
+      for (sf::Vector2i dir : directions)
+      {
+        sf::Vector2i next = tile + dir;
+
+        if (next.x < 0 || next.y < 0 || next.x >= width || next.y >= height)
+        {
+          continue;
+        }
+
+        if (map.isWall(next.x, next.y))
+        {
+          continue;
+        }
+
+        int idx = indexOf(next);
+
+        if (visited[idx])
+        {
+          continue;
+        }
+
+        visited[idx] = 1;
+        parent[idx] = tile;
+        queue.push(next);
+      }
+    }
+
+    if (!visited[indexOf(targetTile)])
+    {
+      return fallbackDirection(currentTile, targetTile, availableDirections, allowReverse);
+    }
+
+    sf::Vector2i step = targetTile;
+
+    while (parent[indexOf(step)] != currentTile && parent[indexOf(step)] != sf::Vector2i{-1, -1})
+    {
+      step = parent[indexOf(step)];
+    }
+
+    sf::Vector2i chosenDirection = step - currentTile;
+
+    if (!allowReverse && availableDirections.size() > 1)
+    {
+      sf::Vector2i reverseDirection = {-direction.x, -direction.y};
+
+      if (chosenDirection == reverseDirection)
+      {
+        return fallbackDirection(currentTile, targetTile, availableDirections, false);
+      }
+    }
+
+    return chosenDirection;
+  }
+
+  sf::Vector2i fallbackDirection(
+      sf::Vector2i currentTile,
+      sf::Vector2i targetTile,
+      const std::vector<sf::Vector2i>& availableDirections,
+      bool allowReverse
+  )
+  {
+    sf::Vector2i reverseDirection = {-direction.x, -direction.y};
     sf::Vector2i bestDirection{0, 0};
     int bestDistance = std::numeric_limits<int>::max();
 
     for (sf::Vector2i candidateDirection : availableDirections)
     {
+      if (!allowReverse && availableDirections.size() > 1 && candidateDirection == reverseDirection)
+      {
+        continue;
+      }
+
       sf::Vector2i nextTile = currentTile + candidateDirection;
-
-      // Avoid immediately returning to the previous tile unless needed.
-      if (availableDirections.size() > 1 && nextTile == previousTile)
-      {
-        continue;
-      }
-
-      // Avoid reversing unless needed.
-      if (availableDirections.size() > 1 && candidateDirection == reverseDirection)
-      {
-        continue;
-      }
 
       int dx = targetTile.x - nextTile.x;
       int dy = targetTile.y - nextTile.y;
@@ -211,28 +685,80 @@ protected:
       }
     }
 
-    // Fallback: choose any direction that is not the previous tile.
-    if (bestDirection == sf::Vector2i{0, 0})
-    {
-      for (sf::Vector2i candidateDirection : availableDirections)
-      {
-        sf::Vector2i nextTile = currentTile + candidateDirection;
-
-        if (nextTile != previousTile)
-        {
-          bestDirection = candidateDirection;
-          break;
-        }
-      }
-    }
-
-    // Final fallback: take the first available direction.
     if (bestDirection == sf::Vector2i{0, 0})
     {
       bestDirection = availableDirections.front();
     }
 
     return bestDirection;
+  }
+
+  sf::Vector2i chooseScaredDirection(sf::Vector2i currentTile, const std::vector<sf::Vector2i>& availableDirections)
+  {
+    sf::Vector2i pacmanTile = pacman.getGridPosition();
+    sf::Vector2i reverseDirection = {-direction.x, -direction.y};
+
+    sf::Vector2i bestDirection{0, 0};
+    int bestDistance = -1;
+
+    for (sf::Vector2i candidateDirection : availableDirections)
+    {
+      if (availableDirections.size() > 1 && candidateDirection == reverseDirection)
+      {
+        continue;
+      }
+
+      sf::Vector2i nextTile = currentTile + candidateDirection;
+
+      int dx = pacmanTile.x - nextTile.x;
+      int dy = pacmanTile.y - nextTile.y;
+      int distance = dx * dx + dy * dy;
+
+      if (distance > bestDistance)
+      {
+        bestDistance = distance;
+        bestDirection = candidateDirection;
+      }
+    }
+
+    if (bestDirection == sf::Vector2i{0, 0})
+    {
+      bestDirection = availableDirections.front();
+    }
+
+    return bestDirection;
+  }
+
+  sf::Vector2i clampToNearestOpenTile(sf::Vector2i wantedTile)
+  {
+    int width = map.getWidth();
+    int height = map.getHeight();
+
+    sf::Vector2i bestTile{1, 1};
+    int bestDistance = std::numeric_limits<int>::max();
+
+    for (int y = 0; y < height; y++)
+    {
+      for (int x = 0; x < width; x++)
+      {
+        if (map.isWall(x, y))
+        {
+          continue;
+        }
+
+        int dx = wantedTile.x - x;
+        int dy = wantedTile.y - y;
+        int distance = dx * dx + dy * dy;
+
+        if (distance < bestDistance)
+        {
+          bestDistance = distance;
+          bestTile = {x, y};
+        }
+      }
+    }
+
+    return bestTile;
   }
 
   sf::Vector2i chooseTargetTile(sf::Vector2i currentTile)
@@ -243,10 +769,14 @@ protected:
     switch (aiType)
     {
       case GhostAI::DirectChase:
-        return directChaseTarget(pacmanTile);
+        return pacmanTile;
 
       case GhostAI::Ambush:
-        return ambushTarget(pacmanTile, pacmanDirection);
+        if (pacmanDirection == sf::Vector2i{0, 0})
+        {
+          return pacmanTile;
+        }
+        return pacmanTile + pacmanDirection * 4;
 
       case GhostAI::Random:
         return randomTargetTile();
@@ -261,38 +791,20 @@ protected:
     return pacmanTile;
   }
 
-  sf::Vector2i directChaseTarget(sf::Vector2i pacmanTile)
-  {
-    // Red: directly targets Pac-Man.
-    return pacmanTile;
-  }
-
-  sf::Vector2i ambushTarget(sf::Vector2i pacmanTile, sf::Vector2i pacmanDirection)
-  {
-    // Pink: targets 4 tiles in front of Pac-Man.
-    if (pacmanDirection == sf::Vector2i{0, 0})
-    {
-      return pacmanTile;
-    }
-
-    return pacmanTile + pacmanDirection * 4;
-  }
-
   sf::Vector2i randomTargetTile()
   {
-    // Cyan: commits to a random target for a while.
     sf::Vector2i currentTile = getCurrentTile();
 
     int dx = randomTarget.x - currentTile.x;
     int dy = randomTarget.y - currentTile.y;
     int distanceSquared = dx * dx + dy * dy;
 
-    if (randomTarget == sf::Vector2i{-1, -1} || distanceSquared <= 4)
+    if (randomTarget == sf::Vector2i{-1, -1} || distanceSquared <= 4 || map.isWall(randomTarget.x, randomTarget.y))
     {
-      randomTarget = {
-          rand() % 20,
-          rand() % 20
-      };
+      randomTarget = clampToNearestOpenTile({
+          rand() % std::max(1, map.getWidth()),
+          rand() % std::max(1, map.getHeight())
+      });
     }
 
     return randomTarget;
@@ -300,7 +812,6 @@ protected:
 
   sf::Vector2i cautiousTarget(sf::Vector2i currentTile, sf::Vector2i pacmanTile)
   {
-    // Green: chases when far away, retreats when close.
     int dx = pacmanTile.x - currentTile.x;
     int dy = pacmanTile.y - currentTile.y;
     int distanceSquared = dx * dx + dy * dy;
@@ -310,33 +821,42 @@ protected:
       return pacmanTile;
     }
 
-    return {18, 18};
+    return clampToNearestOpenTile({map.getWidth() - 2, map.getHeight() - 2});
   }
 
   sf::Vector2i patrolTargetTile(sf::Vector2i currentTile)
   {
-    // White: patrols between corners.
     int dx = patrolTarget.x - currentTile.x;
     int dy = patrolTarget.y - currentTile.y;
     int distanceSquared = dx * dx + dy * dy;
 
+    if (patrolTarget == sf::Vector2i{1, 1} || map.isWall(patrolTarget.x, patrolTarget.y))
+    {
+      patrolTarget = clampToNearestOpenTile({1, 1});
+    }
+
     if (distanceSquared <= 2)
     {
-      if (patrolTarget == sf::Vector2i{1, 1})
+      sf::Vector2i topLeft = clampToNearestOpenTile({1, 1});
+      sf::Vector2i topRight = clampToNearestOpenTile({map.getWidth() - 2, 1});
+      sf::Vector2i bottomRight = clampToNearestOpenTile({map.getWidth() - 2, map.getHeight() - 2});
+      sf::Vector2i bottomLeft = clampToNearestOpenTile({1, map.getHeight() - 2});
+
+      if (patrolTarget == topLeft)
       {
-        patrolTarget = {18, 1};
+        patrolTarget = topRight;
       }
-      else if (patrolTarget == sf::Vector2i{18, 1})
+      else if (patrolTarget == topRight)
       {
-        patrolTarget = {18, 18};
+        patrolTarget = bottomRight;
       }
-      else if (patrolTarget == sf::Vector2i{18, 18})
+      else if (patrolTarget == bottomRight)
       {
-        patrolTarget = {1, 18};
+        patrolTarget = bottomLeft;
       }
       else
       {
-        patrolTarget = {1, 1};
+        patrolTarget = topLeft;
       }
     }
 

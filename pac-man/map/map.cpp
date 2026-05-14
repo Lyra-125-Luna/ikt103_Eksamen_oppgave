@@ -5,13 +5,12 @@
 
 #include <memory>
 #include <fstream>
+#include <algorithm>
 
 #include "map.h"
 #include "object/object.h"
 #include "object/pac-man.h"
 #include "object/layer.h"
-
-// Public functions
 
 bool Map::loadFromFile(const std::string &filename)
 {
@@ -37,25 +36,55 @@ bool Map::loadFromFile(const std::string &filename)
         return false;
     }
 
-    // Get dimensions from first layer since root doesn't have them
-    const auto &firstLayer = root["layers"][0];
-    width     = firstLayer["width"].GetInt();
-    height    = firstLayer["height"].GetInt();
-    tileWidth  = 32; // hardcode or add to your JSON
-    tileHeight = 32; // hardcode or add to your JSON
+    if (root.HasMember("width"))
+    {
+        width = root["width"].GetInt();
+    }
+    else
+    {
+        width = root["layers"][0]["width"].GetInt();
+    }
 
-    // No tilesets in this format, skip loadTileset
+    if (root.HasMember("height"))
+    {
+        height = root["height"].GetInt();
+    }
+    else
+    {
+        height = root["layers"][0]["height"].GetInt();
+    }
 
-    // Read in each layer
+    if (root.HasMember("tilewidth"))
+    {
+        tileWidth = root["tilewidth"].GetInt();
+    }
+    else
+    {
+        tileWidth = 25;
+    }
+
+    if (root.HasMember("tileheight"))
+    {
+        tileHeight = root["tileheight"].GetInt();
+    }
+    else
+    {
+        tileHeight = 25;
+    }
+
     for (auto &layer: root["layers"].GetArray())
     {
         std::string type = layer["type"].GetString();
         std::cout << "Loading layer: " << layer["name"].GetString() << std::endl;
 
         if (type == "tilelayer")
+        {
             loadTileLayer(layer);
+        }
         else
+        {
             loadObjectLayer(layer);
+        }
     }
 
     std::cout << "Map loaded successfully" << std::endl;
@@ -67,34 +96,40 @@ std::vector<AnimationFrame*> *Map::getAnimation(unsigned int gid)
     auto animationIt = animations.find(gid);
 
     if (animationIt != animations.end())
+    {
         return animationIt->second;
+    }
 
     return nullptr;
 }
 
 std::tuple<const sf::Texture&, sf::Rect<int>> Map::getSpriteTextureFromGid(unsigned int gid, int frame)
 {
-    // Extract flip flags
     unsigned int flipFlags = gid >> 29;
 
-    // Remove flip flags
     gid &= ~(0b111 << 29);
 
-    // Look for an animation for this gid
     auto animationIt = animations.find(gid);
 
     if (animationIt != animations.end())
     {
         auto animation = *animationIt->second;
 
-        if (frame >= 0 && frame < (int)animation.size())
+        if (frame >= 0 && frame < static_cast<int>(animation.size()))
+        {
             gid = animation[frame]->gid;
+        }
     }
 
-    // Find the correct tileset for this gid
-    auto tileset = *std::find_if(tilesets.rbegin(), tilesets.rend(), [gid](auto ts) { return gid >= ts->firstGid; });
+    auto tileset = *std::find_if(
+        tilesets.rbegin(),
+        tilesets.rend(),
+        [gid](auto ts)
+        {
+            return gid >= ts->firstGid;
+        }
+    );
 
-    // Calculate x and y positions in the tileset
     int tileid = gid - tileset->firstGid;
     int x = (tileid % tileset->columns) * (tileset->tileWidth + tileset->spacing);
     int y = (tileid / tileset->columns) * (tileset->tileWidth + tileset->spacing);
@@ -102,24 +137,23 @@ std::tuple<const sf::Texture&, sf::Rect<int>> Map::getSpriteTextureFromGid(unsig
     int textureRectWidth = tileset->tileWidth;
     int textureRectHeight = tileset->tileHeight;
 
-    // Vertical flip
     if (flipFlags & 2)
     {
         textureRectHeight *= -1;
         y += tileset->tileHeight;
     }
 
-    // Horizontal flip
     if (flipFlags & 4)
     {
         textureRectWidth *= -1;
         x += tileset->tileWidth;
     }
 
-    return std::tuple<sf::Texture&, sf::Rect<int>>(tileset->texture, sf::Rect<int>({x, y}, {textureRectWidth, textureRectHeight}));
+    return std::tuple<sf::Texture&, sf::Rect<int>>(
+        tileset->texture,
+        sf::Rect<int>({x, y}, {textureRectWidth, textureRectHeight})
+    );
 }
-
-// Protected functions
 
 void Map::loadTileset(rapidjson::Value &tileset)
 {
@@ -132,17 +166,21 @@ void Map::loadTileset(rapidjson::Value &tileset)
     ts->spacing    = tileset["spacing"].GetInt();
 
     if (ts->texture.loadFromFile(std::string("data/") + tileset["image"].GetString()))
+    {
         tilesets.push_back(ts);
+    }
 
-    // Not all tilesets have tiles/animations
     if (!tileset.HasMember("tiles"))
+    {
         return;
+    }
 
     for (rapidjson::Value &tile: tileset["tiles"].GetArray())
     {
-        // Not all tiles have animations
         if (!tile.HasMember("animation"))
+        {
             continue;
+        }
 
         unsigned int animationId = ts->firstGid + tile["id"].GetInt();
 
@@ -152,25 +190,81 @@ void Map::loadTileset(rapidjson::Value &tileset)
             int duration = animation["duration"].GetInt();
 
             if (animations.find(animationId) == animations.end())
+            {
                 animations[animationId] = new std::vector<AnimationFrame*>();
+            }
 
             animations[animationId]->push_back(new AnimationFrame(gid, duration));
         }
     }
 }
 
-bool Map::isWall(int x, int y)
+unsigned int Map::getTileAt(int x, int y) const
 {
+    if (x < 0 || y < 0 || x >= width || y >= height)
+    {
+        return 1;
+    }
+
+    // map_F is the gameplay layer:
+    // 0 = pellet/path, 1 = wall, 2 = gate, 3 = ghost house floor, 4 = power pellet, 5 = fruit.
+    // Prefer it so map_B cannot create invisible walls.
     for (auto &obj : objects)
     {
         auto tileLayer = dynamic_cast<Layer*>(obj);
-        if (tileLayer && tileLayer->name == "map_B")
+
+        if (!tileLayer)
         {
-            int index = y * tileLayer->width + x;
-            return tileLayer->tilemap[index] == 1;
+            continue;
+        }
+
+        if (tileLayer->name != "map_F")
+        {
+            continue;
+        }
+
+        if (x >= tileLayer->width || y >= tileLayer->height)
+        {
+            continue;
+        }
+
+        return tileLayer->tilemap[y * tileLayer->width + x];
+    }
+
+    // Fallback if the map does not have map_F.
+    for (auto &obj : objects)
+    {
+        auto tileLayer = dynamic_cast<Layer*>(obj);
+
+        if (!tileLayer)
+        {
+            continue;
+        }
+
+        if (x >= tileLayer->width || y >= tileLayer->height)
+        {
+            continue;
+        }
+
+        unsigned int tile = tileLayer->tilemap[y * tileLayer->width + x];
+
+        if (tile != 0)
+        {
+            return tile;
         }
     }
-    return false;
+
+    return 0;
+}
+
+bool Map::isWall(int x, int y)
+{
+    if (x < 0 || y < 0 || x >= width || y >= height)
+    {
+        return true;
+    }
+
+    return getTileAt(x, y) == 1;
 }
 
 void Map::loadTileLayer(rapidjson::Value &layer)
@@ -186,15 +280,16 @@ void Map::loadTileLayer(rapidjson::Value &layer)
 
     const auto &tilemap = layer["data"].GetArray();
 
-    // Safety check
-    if ((int)tilemap.Size() != tmp->width * tmp->height)
+    if (static_cast<int>(tilemap.Size()) != tmp->width * tmp->height)
     {
         std::cout << "Warning: layer '" << tmp->name << "' has " << tilemap.Size()
                   << " tiles but expected " << tmp->width * tmp->height << std::endl;
     }
 
-    for (size_t i = 0; i < tilemap.Size() && (int)i < tmp->width * tmp->height; i++)
-        tmp->tilemap[i] = tilemap[(int)i].GetUint();
+    for (size_t i = 0; i < tilemap.Size() && static_cast<int>(i) < tmp->width * tmp->height; i++)
+    {
+        tmp->tilemap[i] = tilemap[static_cast<rapidjson::SizeType>(i)].GetUint();
+    }
 
     objects.push_back(tmp);
 }
@@ -202,13 +297,16 @@ void Map::loadTileLayer(rapidjson::Value &layer)
 void Map::loadObjectLayer(rapidjson::Value &layer)
 {
     if (!layer.HasMember("objects"))
+    {
         return;
+    }
 
     for (rapidjson::Value &object: layer["objects"].GetArray())
     {
-        // Some objects may not have a gid (non-tile objects)
         if (!object.HasMember("gid"))
+        {
             continue;
+        }
 
         auto sprite = new Sprite(*this);
 

@@ -1,4 +1,3 @@
-
 #ifndef PAC_MAN_OBJECT_H
 #define PAC_MAN_OBJECT_H
 
@@ -8,7 +7,6 @@
 class Object
 {
 public:
-
     Object()
     {
         x = y = xspeed = yspeed = 0;
@@ -16,31 +14,28 @@ public:
 
     Object(float x, float y) : x(x), y(y), xspeed(0), yspeed(0) {}
 
-    int red;
-    int blue;
+    virtual ~Object() = default;
 
-    // Common logic for moving objects
+    int red = 0;
+    int blue = 0;
+
+    // Common logic for moving objects.
     virtual void logic(float deltaTime)
     {
         x += xspeed * deltaTime;
         y += yspeed * deltaTime;
     }
 
-    // draw() is pure virtual since the Object class doesn't have a visual representation
+    // draw() is pure virtual because Object has no visual representation.
     virtual void draw(sf::RenderWindow &window) = 0;
 
-    float x;
-    float xspeed;
+    float x = 0.f;
+    float xspeed = 0.f;
 
-    float y;
-    float yspeed;
+    float y = 0.f;
+    float yspeed = 0.f;
 
     float getX() const { return x; }
-
-
-
-
 };
 
-
-#endif //PAC_MAN_OBJECT_H
+#endif // PAC_MAN_OBJECT_H

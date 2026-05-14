@@ -43,7 +43,7 @@ public:
         }
 
         const float tileW = 500.f / 20.f;
-        const float tileH = 420.f / 20.f;
+        const float tileH = 500.f / 20.f;
 
         for (int y = 0; y < height; y++)
         {

@@ -415,6 +415,16 @@ protected:
     {
       sf::Vector2i wantedTile = currentTile + wantedDirection;
 
+      // Wrap horizontally
+      if (wantedTile.x < 0)
+      {
+        wantedTile.x = map.getWidth() - 1;
+      }
+      else if (wantedTile.x >= map.getWidth())
+      {
+        wantedTile.x = 0;
+      }
+
       if (!map.isWall(wantedTile.x, wantedTile.y))
       {
         direction = wantedDirection;
@@ -428,6 +438,16 @@ protected:
 
     sf::Vector2i nextTile = currentTile + direction;
 
+    // Wrap horizontally
+    if (nextTile.x < 0)
+    {
+      nextTile.x = map.getWidth() - 1;
+    }
+    else if (nextTile.x >= map.getWidth())
+    {
+      nextTile.x = 0;
+    }
+
     if (map.isWall(nextTile.x, nextTile.y))
     {
       direction = {0, 0};
@@ -435,6 +455,7 @@ protected:
     }
 
     targetCenter = getTileCenter(nextTile.x, nextTile.y);
+
     isMoving = true;
     startedMoving = true;
   }
@@ -459,6 +480,18 @@ protected:
     {
       x = targetCenter.x - radius;
       y = targetCenter.y - radius;
+
+      // INSTANT tunnel wrap
+      sf::Vector2i tile = getCurrentTile();
+
+      if (tile.x <= 0 && direction.x < 0)
+      {
+        x = (map.getWidth() - 1) * tileSize;
+      }
+      else if (tile.x >= map.getWidth() - 1 && direction.x > 0)
+      {
+        x = 0;
+      }
 
       isMoving = false;
       return;
@@ -511,5 +544,6 @@ protected:
     sprite.setPosition(tileCenter);
   }
 };
+
 
 #endif // PAC_MAN_PAC_MAN_H

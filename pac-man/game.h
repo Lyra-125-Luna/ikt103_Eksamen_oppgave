@@ -9,6 +9,7 @@
 
 #include "object/object.h"
 #include "object/pac-man.h"
+#include "data/auido/sounds.h"          // <-- add this
 
 class game
 {
@@ -50,6 +51,8 @@ protected:
 
     sf::Texture cherryTexture;
 
+    sounds_muscik sounds;    // <-- add this
+
     int score = 0;
     int lives = 3;
 
@@ -57,4 +60,4 @@ protected:
     bool gameLost = false;
 };
 
-#endif // IKT103_EKSAMEN_OPPGAVE_GAME_H
+#endif

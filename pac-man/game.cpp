@@ -99,6 +99,16 @@ bool game::init()
     createCharacters();
     scanCollectibles();
 
+    // Replace "test..." with this:
+    if (!sounds.getBuffer())
+    {
+        std::cout << "Warning: some sounds failed to load.\n";
+    }
+    else
+    {
+        sounds.playMusic();
+    }
+
     return true;
 }
 
@@ -276,6 +286,7 @@ void game::checkCollectibles()
     if (eraseTile(normalPellets))
     {
         score += 100;
+        sounds.playPickUp();
     }
 
     if (eraseTile(fruits))
@@ -287,16 +298,15 @@ void game::checkCollectibles()
     {
         score += 1000;
 
+        sounds.playPowerUp(8.f);
         playerPtr->activatePowerMode(8.f);
+
 
         for (auto& object : objects)
         {
             ghost* g = dynamic_cast<ghost*>(object.get());
-
             if (g != nullptr)
-            {
                 g->makeScared(8.f);
-            }
         }
     }
 
@@ -635,7 +645,9 @@ bool game::gameTick(float deltaTime)
         }
     }
 
+
     window.clear(sf::Color::Black);
+    sounds.updatePowerUpState(deltaTime);
 
     for (auto& obj : gameMap.GetObjects())
     {

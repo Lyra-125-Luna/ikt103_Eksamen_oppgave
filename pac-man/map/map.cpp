@@ -22,7 +22,6 @@ bool Map::loadFromFile(const std::string &filename)
 
     if (!ifs.is_open())
     {
-        std::cout << "Could not open file: " << filename << std::endl;
         return false;
     }
 
@@ -32,7 +31,6 @@ bool Map::loadFromFile(const std::string &filename)
 
     if (root.HasParseError() || !root.IsObject())
     {
-        std::cout << "JSON parse error!" << std::endl;
         return false;
     }
 
@@ -75,7 +73,6 @@ bool Map::loadFromFile(const std::string &filename)
     for (auto &layer: root["layers"].GetArray())
     {
         std::string type = layer["type"].GetString();
-        std::cout << "Loading layer: " << layer["name"].GetString() << std::endl;
 
         if (type == "tilelayer")
         {
@@ -86,8 +83,6 @@ bool Map::loadFromFile(const std::string &filename)
             loadObjectLayer(layer);
         }
     }
-
-    std::cout << "Map loaded successfully" << std::endl;
     return true;
 }
 
@@ -205,10 +200,6 @@ unsigned int Map::getTileAt(int x, int y) const
     {
         return 1;
     }
-
-    // map_F is the gameplay layer:
-    // 0 = pellet/path, 1 = wall, 2 = gate, 3 = ghost house floor, 4 = power pellet, 5 = fruit.
-    // Prefer it so map_B cannot create invisible walls.
     for (auto &obj : objects)
     {
         auto tileLayer = dynamic_cast<Layer*>(obj);
@@ -230,8 +221,6 @@ unsigned int Map::getTileAt(int x, int y) const
 
         return tileLayer->tilemap[y * tileLayer->width + x];
     }
-
-    // Fallback if the map does not have map_F.
     for (auto &obj : objects)
     {
         auto tileLayer = dynamic_cast<Layer*>(obj);
@@ -280,11 +269,6 @@ void Map::loadTileLayer(rapidjson::Value &layer)
 
     const auto &tilemap = layer["data"].GetArray();
 
-    if (static_cast<int>(tilemap.Size()) != tmp->width * tmp->height)
-    {
-        std::cout << "Warning: layer '" << tmp->name << "' has " << tilemap.Size()
-                  << " tiles but expected " << tmp->width * tmp->height << std::endl;
-    }
 
     for (size_t i = 0; i < tilemap.Size() && static_cast<int>(i) < tmp->width * tmp->height; i++)
     {

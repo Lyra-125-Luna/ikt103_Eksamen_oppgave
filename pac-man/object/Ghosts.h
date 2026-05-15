@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <iostream>
 #include <limits>
 #include <queue>
 #include <string>
@@ -274,51 +273,15 @@ protected:
   void loadSprites()
   {
     std::string bodyPath = getBodyTexturePath();
-
-    if (!bodyTexture.loadFromFile(bodyPath))
-    {
-      std::cout << "Failed to load ghost body: " << bodyPath << std::endl;
-    }
-
-    if (!scaredTexture.loadFromFile("data/assets/ghosts/ghostscared.png"))
-    {
-      std::cout << "Failed to load ghostscared.png\n";
-    }
-
-    if (!deadTexture.loadFromFile("data/assets/ghosts/ghostdead.png"))
-    {
-      std::cout << "Failed to load ghostdead.png\n";
-    }
-
-    if (!eyeRightTexture.loadFromFile("data/assets/ghosts/eyeright.png"))
-    {
-      std::cout << "Failed to load eyeright.png\n";
-    }
-
-    if (!eyeLeftTexture.loadFromFile("data/assets/ghosts/eyeleft.png"))
-    {
-      std::cout << "Failed to load eyeleft.png\n";
-    }
-
-    if (!eyeUpTexture.loadFromFile("data/assets/ghosts/eyeup.png"))
-    {
-      std::cout << "Failed to load eyeup.png\n";
-    }
-
-    if (!eyeDownTexture.loadFromFile("data/assets/ghosts/eyedown.png"))
-    {
-      std::cout << "Failed to load eyedown.png\n";
-    }
-
-    if (!eyeScaredTexture.loadFromFile("data/assets/ghosts/eyescared.png"))
-    {
-      std::cout << "Failed to load eyescared.png\n";
-    }
-
-    if (!eyeWaitingTexture.loadFromFile("data/assets/ghosts/eyewaiting.png"))
-    {
-      std::cout << "Failed to load eyewaiting.png\n";
-    }
+    bodyTexture.loadFromFile(bodyPath);
+    scaredTexture.loadFromFile("data/assets/ghosts/ghostscared.png");
+    deadTexture.loadFromFile("data/assets/ghosts/ghostdead.png");
+    eyeRightTexture.loadFromFile("data/assets/ghosts/eyeright.png");
+    eyeLeftTexture.loadFromFile("data/assets/ghosts/eyeleft.png");
+    eyeUpTexture.loadFromFile("data/assets/ghosts/eyeup.png");
+    eyeDownTexture.loadFromFile("data/assets/ghosts/eyedown.png");
+    eyeScaredTexture.loadFromFile("data/assets/ghosts/eyescared.png");
+    eyeWaitingTexture.loadFromFile("data/assets/ghosts/eyewaiting.png");
 
     bodySprite.setTexture(bodyTexture, true);
     eyeSprite.setTexture(eyeRightTexture, true);
@@ -934,4 +897,4 @@ protected:
   }
 };
 
-#endif // PAC_MAN_GHOSTS_H
+#endif

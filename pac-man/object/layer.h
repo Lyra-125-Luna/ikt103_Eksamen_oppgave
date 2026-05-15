@@ -9,7 +9,6 @@
 
 #include <map>
 #include <string>
-#include <iostream>
 
 class Map;
 
@@ -36,9 +35,6 @@ public:
         {
             return;
         }
-
-        // Draw only the main map layer.
-        // This prevents map_B + map_F double-rendering and confusing auto-wall masks.
         if (name != "map_F")
         {
             return;
@@ -79,19 +75,16 @@ public:
 
                 if (tileValue == 3)
                 {
-                    // Ghost house floor. Draw nothing for now.
                     continue;
                 }
 
                 if (tileValue == 4)
                 {
-                    // Power pellets are drawn in game.cpp so they can disappear.
                     continue;
                 }
 
                 if (tileValue == 5)
                 {
-                    // Fruit is drawn in game.cpp so it can disappear.
                     continue;
                 }
             }
@@ -121,10 +114,7 @@ private:
 
     void loadTexture(const std::string& key, const std::string& path)
     {
-        if (!textures[key].loadFromFile(path))
-        {
-            std::cout << "Failed to load wall texture: " << path << std::endl;
-        }
+        textures[key].loadFromFile(path);
     }
 
     bool isWallValue(unsigned int value) const
@@ -147,10 +137,10 @@ private:
     {
         int mask = 0;
 
-        if (isWallAt(x, y - 1)) mask |= 1; // up
-        if (isWallAt(x + 1, y)) mask |= 2; // right
-        if (isWallAt(x, y + 1)) mask |= 4; // down
-        if (isWallAt(x - 1, y)) mask |= 8; // left
+        if (isWallAt(x, y - 1)) mask |= 1;
+        if (isWallAt(x + 1, y)) mask |= 2;
+        if (isWallAt(x, y + 1)) mask |= 4;
+        if (isWallAt(x - 1, y)) mask |= 8;
 
         return mask;
     }
@@ -322,4 +312,4 @@ private:
     Map &map;
 };
 
-#endif // PAC_MAN_LAYER_H
+#endif

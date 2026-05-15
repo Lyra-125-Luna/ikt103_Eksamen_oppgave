@@ -1,25 +1,19 @@
-#include <iostream>
-#include <filesystem>
-#include <vector>
-#include <algorithm>
-#include <string>
-
 #include <SFML/Graphics.hpp>
 
-#include "game.h"
-#include "object/Ghosts.h"
-#include "object/pac-man.h"
+#include <algorithm>
+#include <string>
+#include <vector>
 
+#include "game.h"
 #include "map/map.h"
+#include "object/Ghosts.h"
 #include "object/layer.h"
+#include "object/pac-man.h"
 
 Map gameMap;
 
-// Bigger square window. The actual game still uses 25px tiles internally,
-// but the view scales the whole map up to fill this window.
 static constexpr unsigned int windowWidth = 1000;
 static constexpr unsigned int windowHeight = 1000;
-
 static constexpr float tileSize = 25.f;
 
 static pac_man* playerPtr = nullptr;
@@ -42,7 +36,6 @@ static void setScaledMapView(sf::RenderWindow& window, float mapPixelWidth, floa
 
     sf::FloatRect viewport({0.f, 0.f}, {1.f, 1.f});
 
-    // Preserve aspect ratio. On the current 20x20 map this fills the whole 1000x1000 window.
     if (windowRatio > mapRatio)
     {
         float viewportWidth = mapRatio / windowRatio;
@@ -62,11 +55,8 @@ static void setScaledMapView(sf::RenderWindow& window, float mapPixelWidth, floa
 
 bool game::init()
 {
-    std::cout << "Working dir: " << std::filesystem::current_path() << std::endl;
-
     if (!gameMap.loadFromFile("data/map/map.json"))
     {
-        std::cout << "Failed to load map data." << std::endl;
         return false;
     }
 
@@ -86,28 +76,13 @@ bool game::init()
         hudFontLoaded = hudFont.openFromFile("C:/Windows/Fonts/arial.ttf");
     }
 
-    if (!hudFontLoaded)
-    {
-        std::cout << "Could not load HUD font. Score text will not draw.\n";
-    }
-
-    if (!cherryTexture.loadFromFile("data/assets/cherry.png"))
-    {
-        std::cout << "Could not load cherry texture: data/assets/cherry.png\n";
-    }
+    cherryTexture.loadFromFile("data/assets/cherry.png");
 
     createCharacters();
     scanCollectibles();
 
-    // Replace "test..." with this:
-    if (!sounds.getBuffer())
-    {
-        std::cout << "Warning: some sounds failed to load.\n";
-    }
-    else
-    {
-        sounds.playMusic();
-    }
+    sounds.load();
+    sounds.playMusic();
 
     return true;
 }
@@ -121,6 +96,7 @@ void game::createCharacters()
     int mapHeight = gameMap.getHeight();
 
     int gateX = mapWidth / 2;
+
     if (mapWidth % 2 == 0)
     {
         gateX -= 1;
@@ -129,14 +105,14 @@ void game::createCharacters()
     int houseY = mapHeight / 2;
     int pacmanSpawnY = mapHeight - 2;
 
-    float max_X = static_cast<float>(mapWidth) * tileSize;
-    float max_Y = static_cast<float>(mapHeight) * tileSize;
+    float maxX = static_cast<float>(mapWidth) * tileSize;
+    float maxY = static_cast<float>(mapHeight) * tileSize;
 
     auto player = std::make_unique<pac_man>(
         tileToPixel(gateX),
         tileToPixel(pacmanSpawnY),
-        max_Y,
-        max_X,
+        maxY,
+        maxX,
         gameMap
     );
 
@@ -297,16 +273,17 @@ void game::checkCollectibles()
     if (eraseTile(powerPellets))
     {
         score += 1000;
-
         sounds.playPowerUp(8.f);
         playerPtr->activatePowerMode(8.f);
 
-
         for (auto& object : objects)
         {
-            ghost* g = dynamic_cast<ghost*>(object.get());
-            if (g != nullptr)
-                g->makeScared(8.f);
+            ghost* currentGhost = dynamic_cast<ghost*>(object.get());
+
+            if (currentGhost != nullptr)
+            {
+                currentGhost->makeScared(8.f);
+            }
         }
     }
 
@@ -327,26 +304,26 @@ void game::checkGhostCollisions()
 
     for (auto& object : objects)
     {
-        ghost* g = dynamic_cast<ghost*>(object.get());
+        ghost* currentGhost = dynamic_cast<ghost*>(object.get());
 
-        if (g == nullptr)
+        if (currentGhost == nullptr)
         {
             continue;
         }
 
-        bool touchingGhost = pacmanBounds.findIntersection(g->getBounds()).has_value();
+        bool touchingGhost = pacmanBounds.findIntersection(currentGhost->getBounds()).has_value();
 
         if (!touchingGhost)
         {
             continue;
         }
 
-        if (g->isScared())
+        if (currentGhost->isScared())
         {
             score += 2000;
-            g->makeDead();
+            currentGhost->makeDead();
         }
-        else if (!g->isDead())
+        else if (!currentGhost->isDead())
         {
             score = std::max(0, score - 5000);
             playerPtr->startDeathAnimation();
@@ -412,18 +389,6 @@ void game::drawFruits()
 
             window.draw(fruitSprite);
         }
-        else
-        {
-            sf::CircleShape fruitShape;
-            fruitShape.setRadius(6.f);
-            fruitShape.setFillColor(sf::Color(255, 120, 0));
-            fruitShape.setPosition({
-                fruit.x * tileSize + tileSize / 2.f - 6.f,
-                fruit.y * tileSize + tileSize / 2.f - 6.f
-            });
-
-            window.draw(fruitShape);
-        }
     }
 }
 
@@ -435,6 +400,7 @@ void game::drawScore()
     }
 
     int gateX = gameMap.getWidth() / 2;
+
     if (gameMap.getWidth() % 2 == 0)
     {
         gateX -= 1;
@@ -630,9 +596,9 @@ bool game::gameTick(float deltaTime)
 
             for (auto& object : objects)
             {
-                ghost* g = dynamic_cast<ghost*>(object.get());
+                ghost* currentGhost = dynamic_cast<ghost*>(object.get());
 
-                if (g != nullptr && !ghostsCanMove)
+                if (currentGhost != nullptr && !ghostsCanMove)
                 {
                     continue;
                 }
@@ -645,13 +611,12 @@ bool game::gameTick(float deltaTime)
         }
     }
 
-
     window.clear(sf::Color::Black);
     sounds.updatePowerUpState(deltaTime);
 
-    for (auto& obj : gameMap.GetObjects())
+    for (auto& object : gameMap.GetObjects())
     {
-        obj->draw(window);
+        object->draw(window);
     }
 
     drawNormalPellets();

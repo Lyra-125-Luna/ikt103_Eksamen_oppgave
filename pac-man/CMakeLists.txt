@@ -12,9 +12,8 @@ add_executable(pac_man main.cpp
         object/pac-man.h
         object/Ghosts.h
         object/layer.h
-        data/auido/sounds.cpp
-        data/auido/sounds.h)
-
+        data/audio/sounds.cpp
+        data/audio/sounds.h)
 
 target_include_directories(pac_man PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

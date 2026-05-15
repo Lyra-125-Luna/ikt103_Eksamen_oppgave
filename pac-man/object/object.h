@@ -16,17 +16,12 @@ public:
 
     virtual ~Object() = default;
 
-    int red = 0;
-    int blue = 0;
-
-    // Common logic for moving objects.
     virtual void logic(float deltaTime)
     {
         x += xspeed * deltaTime;
         y += yspeed * deltaTime;
     }
 
-    // draw() is pure virtual because Object has no visual representation.
     virtual void draw(sf::RenderWindow &window) = 0;
 
     float x = 0.f;
@@ -38,4 +33,4 @@ public:
     float getX() const { return x; }
 };
 
-#endif // PAC_MAN_OBJECT_H
+#endif

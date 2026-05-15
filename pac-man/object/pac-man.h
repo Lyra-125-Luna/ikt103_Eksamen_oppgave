@@ -3,7 +3,6 @@
 
 #include <SFML/Graphics.hpp>
 #include <random>
-#include <iostream>
 #include <cmath>
 #include <array>
 #include <string>
@@ -31,7 +30,6 @@ public:
 
   void collision_handler(const sf::FloatRect &wall)
   {
-    // Not used right now.
   }
 
   void logic(float deltaTime) override
@@ -209,21 +207,13 @@ protected:
     for (int i = 0; i < 5; i++)
     {
       std::string path = "data/assets/pacman/pacman" + std::to_string(i + 1) + ".png";
-
-      if (!animationTextures[i].loadFromFile(path))
-      {
-        std::cout << "Failed to load Pac-Man sprite: " << path << std::endl;
-      }
+      animationTextures[i].loadFromFile(path);
     }
 
     for (int i = 0; i < 6; i++)
     {
       std::string path = "data/assets/pacman/pacmandie" + std::to_string(i + 1) + ".png";
-
-      if (!deathTextures[i].loadFromFile(path))
-      {
-        std::cout << "Failed to load Pac-Man death sprite: " << path << std::endl;
-      }
+      deathTextures[i].loadFromFile(path);
     }
 
     sprite.setTexture(animationTextures[0], true);
@@ -333,23 +323,8 @@ protected:
 
   void handleConnectionMessage()
   {
-    bool isConnected = sf::Joystick::isConnected(joystickId);
-
-    if (startup)
-    {
-      if (isConnected && !wasConnected)
-      {
-        std::cout << "Joystick connected\n";
-      }
-      else if (!isConnected && wasConnected)
-      {
-        std::cout << "Joystick disconnected\n";
-      }
-
-      startup = false;
-    }
-
-    wasConnected = isConnected;
+    wasConnected = sf::Joystick::isConnected(joystickId);
+    startup = false;
   }
 
   void handleInput()
@@ -414,8 +389,6 @@ protected:
     if (wantedDirection != sf::Vector2i{0, 0})
     {
       sf::Vector2i wantedTile = currentTile + wantedDirection;
-
-      // Wrap horizontally
       if (wantedTile.x < 0)
       {
         wantedTile.x = map.getWidth() - 1;
@@ -437,8 +410,6 @@ protected:
     }
 
     sf::Vector2i nextTile = currentTile + direction;
-
-    // Wrap horizontally
     if (nextTile.x < 0)
     {
       nextTile.x = map.getWidth() - 1;
@@ -480,8 +451,6 @@ protected:
     {
       x = targetCenter.x - radius;
       y = targetCenter.y - radius;
-
-      // INSTANT tunnel wrap
       sf::Vector2i tile = getCurrentTile();
 
       if (tile.x <= 0 && direction.x < 0)
@@ -546,4 +515,4 @@ protected:
 };
 
 
-#endif // PAC_MAN_PAC_MAN_H
+#endif
